@@ -1,0 +1,1141 @@
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>APEX AUDIO X1 — 3D沉浸式產品展示</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              400: '#60a5fa',
+              500: '#3b82f6',
+              600: '#2563eb',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- External Libraries: Three.js, OrbitControls, GSAP, ScrollTrigger, FontAwesome -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+
+  <!-- Glassmorphism & Custom CSS -->
+  <style>
+    /* Custom Scrollbar & Utility CSS */
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0d0e11;
+      color: #f3f4f6;
+      overflow-x: hidden;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0d0e11;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #262932;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b82f6;
+    }
+
+    /* Glassmorphism Styles */
+    .glass-panel {
+      background: rgba(22, 24, 29, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .glass-button {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .glass-button:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(96, 165, 250, 0.5);
+    }
+
+    /* Fixed Canvas Layer setup */
+    #webgl-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 10;
+      pointer-events: none; /* Let events fall through to HTML by default */
+    }
+
+    /* Active 3D Touch/Mouse Control Container overlay in Section 04 */
+    #3d-interaction-overlay {
+      touch-action: none; /* Prevent scroll interference during 3D drag/pinch */
+    }
+
+    /* Premium Hero Title Typography & Mask Reveals */
+    .hero-mask-wrapper {
+      overflow: hidden;
+      display: block;
+    }
+
+    .hero-title-text {
+      display: inline-block;
+      will-change: transform, opacity;
+    }
+
+    .title-subtle-glow {
+      text-shadow: 0 0 35px rgba(59, 130, 246, 0.25);
+    }
+
+    /* HUD Annotation Label Pin Styling */
+    .annotation-pin {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+  </style>
+</head>
+
+<body class="relative">
+
+  <!-- 00. Loading Screen overlay -->
+  <div id="loader" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0d0e11] transition-opacity duration-700">
+    <div class="relative flex items-center justify-center">
+      <div class="w-20 h-20 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin"></div>
+      <i class="fa-solid font-bold text-xl text-white absolute">X1</i>
+    </div>
+    <p class="mt-6 text-sm tracking-widest text-gray-400 uppercase font-medium">加載 3D 沉浸式體驗區中...</p>
+  </div>
+
+  <!-- 3D Canvas Container Layer -->
+  <div id="webgl-container"></div>
+
+  <!-- Navigation Bar -->
+  <nav class="fixed top-0 left-0 right-0 z-40 px-6 py-4 transition-all duration-300 glass-panel border-b-0 border-white/5">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2 font-bold text-xl tracking-wider text-white">
+        <span class="w-3 h-3 rounded-full bg-brand-500 inline-block shadow-[0_0_12px_rgba(59,130,246,0.8)]"></span>
+        APEX<span class="text-brand-400 font-light">AUDIO</span>
+      </a>
+
+      <!-- Desktop Nav Links -->
+      <div class="hidden md:flex items-center gap-8 text-sm text-gray-300 font-medium">
+        <a href="#hero" class="hover:text-brand-400 transition-colors">概覽</a>
+        <a href="#features" class="hover:text-brand-400 transition-colors">核心技術</a>
+        <a href="#explode" class="hover:text-brand-400 transition-colors">聲學拆解</a>
+        <a href="#explore" class="hover:text-brand-400 transition-colors">360° 探索</a>
+        <a href="#specs" class="hover:text-brand-400 transition-colors">規格與訂購</a>
+      </div>
+
+      <!-- Action Button & Cart Indicator -->
+      <div class="flex items-center gap-4">
+        <button id="cartBtn" class="relative p-2 text-gray-300 hover:text-white transition-colors">
+          <i class="fa-solid fa-bag-shopping text-lg"></i>
+          <span id="cartBadge" class="hidden absolute -top-1 -right-1 bg-brand-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">1</span>
+        </button>
+        <a href="#specs" class="px-5 py-2.5 rounded-full text-xs font-semibold tracking-wide bg-brand-500 hover:bg-brand-600 text-white shadow-lg shadow-brand-500/25 transition-all transform hover:-translate-y-0.5">
+          立即購買
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Scrollable Content Container -->
+  <main class="relative z-20 pointer-events-none">
+
+    <!-- 01. Hero Section (Redesigned Elegant Typography & Reveal Animations) -->
+    <section id="hero" class="min-h-screen flex items-center pt-24 px-6 md:px-12 max-w-7xl mx-auto pointer-events-auto">
+      <div class="w-full md:w-8/12 space-y-8">
+        <!-- Subtitle Badge -->
+        <div id="heroBadge" class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/[0.03] border border-white/10 text-brand-400 text-xs font-mono font-medium tracking-[0.2em] uppercase backdrop-blur-md opacity-0">
+          <span class="w-2 h-2 rounded-full bg-brand-400 shadow-[0_0_8px_#60a5fa]"></span>
+          2026 旗艦級無損原音
+        </div>
+
+        <!-- Premium Masked Title Group -->
+        <div class="space-y-2">
+          <div class="hero-mask-wrapper">
+            <h1 id="heroTitleLine1" class="hero-title-text text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight bg-gradient-to-r from-white via-slate-200 to-brand-400 bg-clip-text text-transparent leading-[1.05] title-subtle-glow opacity-0 translate-y-full">
+              純粹聲學
+            </h1>
+          </div>
+        </div>
+
+        <!-- Subtext -->
+        <p id="heroSubtext" class="text-gray-400 text-base sm:text-lg md:text-xl max-w-xl leading-relaxed font-light opacity-0 translate-y-6">
+          APEX AUDIO X1 結合 45mm 鍍鈹振膜單元與自適應主動降噪。以航太級鋁合金鍛造，打造無與倫比的聲學沉浸感與極致佩戴體驗。
+        </p>
+
+        <!-- CTA Buttons -->
+        <div id="heroActions" class="flex flex-wrap items-center gap-4 pt-2 opacity-0 translate-y-6">
+          <a href="#explore" class="px-8 py-4 rounded-full bg-brand-500 hover:bg-brand-600 text-white font-medium text-sm transition-all shadow-xl shadow-brand-500/25 flex items-center gap-3 group">
+            探索 3D 產品 <i class="fa-solid fa-arrow-right group-hover:translate-x-1.5 transition-transform"></i>
+          </a>
+          <a href="#explode" class="px-8 py-4 rounded-full glass-button text-white font-medium text-sm hover:border-white/30 flex items-center gap-2.5">
+            <i class="fa-solid fa-layer-group text-brand-400"></i> 結構拆解
+          </a>
+        </div>
+
+        <!-- Specs Highlight Pill -->
+        <div id="heroStats" class="grid grid-cols-3 gap-6 pt-8 border-t border-white/10 max-w-md opacity-0">
+          <div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">48<span class="text-brand-400 text-base font-normal">h</span></div>
+            <div class="text-xs text-gray-400 mt-1 font-medium">極致續航力</div>
+          </div>
+          <div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">-45<span class="text-brand-400 text-base font-normal">dB</span></div>
+            <div class="text-xs text-gray-400 mt-1 font-medium">智慧主動降噪</div>
+          </div>
+          <div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-brand-400 tracking-tight">HI-RES</div>
+            <div class="text-xs text-gray-400 mt-1 font-medium">無損金標認證</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02. Scroll Feature Sections (Scrollytelling target points) -->
+    <section id="features" class="space-y-32 py-24 px-6 md:px-12 max-w-7xl mx-auto">
+      
+      <!-- Feature 1: Pure Audio Driver -->
+      <div class="feature-card min-h-[60vh] flex items-center justify-end pointer-events-auto" data-cam-pos="driver">
+        <div class="w-full md:w-5/12 glass-panel p-8 md:p-10 rounded-3xl space-y-4">
+          <span class="text-brand-400 text-xs font-mono font-bold tracking-widest uppercase">01 / 聲學架構</span>
+          <h2 class="text-3xl font-bold text-white">45mm 航太級鍍鈹雙核驅動單元</h2>
+          <p class="text-gray-400 text-sm leading-relaxed">
+            採用極輕量化鈹金屬塗層振膜，頻率響應範圍廣達 5Hz - 40,000Hz。提供深沉強勁的低音回響與極致清澈的高音細節，精確還原錄音室等級的原始聲音細節。
+          </p>
+        </div>
+      </div>
+
+      <!-- Feature 2: Active Noise Cancellation -->
+      <div class="feature-card min-h-[60vh] flex items-center justify-start pointer-events-auto" data-cam-pos="anc">
+        <div class="w-full md:w-5/12 glass-panel p-8 md:p-10 rounded-3xl space-y-4">
+          <span class="text-brand-400 text-xs font-mono font-bold tracking-widest uppercase">02 / 智慧降噪</span>
+          <h2 class="text-3xl font-bold text-white">Dual-Core 自適應 Anc 3.0 系統</h2>
+          <p class="text-gray-400 text-sm leading-relaxed">
+            配備 6 顆前饋與反饋全向式麥克風，每秒進行 200,000 次環境噪音分析。自動消除高達 45dB 的外界噪音，無論在飛機機艙還是熱鬧街頭，都能享受屬於你的絕對寧靜。
+          </p>
+        </div>
+      </div>
+
+      <!-- Feature 3: Ergonomics -->
+      <div class="feature-card min-h-[60vh] flex items-center justify-end pointer-events-auto" data-cam-pos="comfort">
+        <div class="w-full md:w-5/12 glass-panel p-8 md:p-10 rounded-3xl space-y-4">
+          <span class="text-brand-400 text-xs font-mono font-bold tracking-widest uppercase">03 / 佩戴工藝</span>
+          <h2 class="text-3xl font-bold text-white">蛋白皮革與無感記憶重力分配頭帶</h2>
+          <p class="text-gray-400 text-sm leading-relaxed">
+            人體工學懸掛式設計，結合高透氣蛋白皮革與慢回彈記憶棉。完美貼合各種頭型，大幅降低側向壓迫感，即使全天佩戴依然輕盈無負擔。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03. 3D Explosion Structure Section -->
+    <section id="explode" class="min-h-screen py-24 px-6 md:px-12 max-w-7xl mx-auto flex flex-col justify-between relative pointer-events-auto">
+      <div class="text-center max-w-2xl mx-auto space-y-4">
+        <h2 class="text-3xl md:text-5xl font-extrabold text-white">精密結構 ‧ 一覽無遺</h2>
+        <p class="text-gray-400 text-sm md:text-base">
+          點擊下方控制鈕進行 3D 爆炸解構，探索 Apex Audio X1 的百餘個精密聲學零件與防震腔體設計。
+        </p>
+      </div>
+
+      <!-- Explode Control Floating HUD -->
+      <div class="my-auto flex justify-center py-12 pointer-events-auto relative z-30">
+        <div class="glass-panel p-2 rounded-full inline-flex items-center gap-2">
+          <button id="btnAssemble" class="px-6 py-2.5 rounded-full text-xs font-semibold bg-brand-500 text-white transition-all shadow-md">
+            <i class="fa-solid fa-cube mr-1"></i> 完整組合
+          </button>
+          <button id="btnExplode" class="px-6 py-2.5 rounded-full text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-all">
+            <i class="fa-solid fa-burst mr-1"></i> 3D 結構拆解
+          </button>
+        </div>
+      </div>
+
+      <!-- Interactive Hotspots HTML overlays (Bounding inside #explode section) -->
+      <div id="hotspotContainer" class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-500 z-20 overflow-hidden">
+        <div id="pin1" class="annotation-pin glass-panel px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-xs text-white border border-brand-500/50 flex items-center gap-2 max-w-[160px] sm:max-w-[200px] md:max-w-xs shadow-xl">
+          <span class="w-2 h-2 rounded-full bg-brand-400 animate-ping flex-shrink-0"></span>
+          <div>
+            <div class="font-bold text-white text-[11px] md:text-xs">45mm 鍍鈹單元</div>
+            <div class="text-[9px] md:text-[10px] text-gray-400">聲學心臟驅動模組</div>
+          </div>
+        </div>
+        <div id="pin2" class="annotation-pin glass-panel px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-xs text-white border border-brand-500/50 flex items-center gap-2 max-w-[160px] sm:max-w-[200px] md:max-w-xs shadow-xl">
+          <span class="w-2 h-2 rounded-full bg-brand-400 animate-ping flex-shrink-0"></span>
+          <div>
+            <div class="font-bold text-white text-[11px] md:text-xs">自適應主板</div>
+            <div class="text-[9px] md:text-[10px] text-gray-400">雙核 ANC 晶片與藍牙 5.3</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04. Interactive 360° Customizer Section (Fixed 3D Touch Interaction Area) -->
+    <section id="explore" class="min-h-screen py-24 px-6 md:px-12 max-w-7xl mx-auto flex flex-col justify-between relative pointer-events-auto">
+      
+      <!-- Dedicated Interactive Touch Overlay for OrbitControls (Controlled by Interactive Mode) -->
+      <div id="3d-interaction-overlay" class="absolute inset-0 z-20 cursor-grab active:cursor-grabbing rounded-3xl pointer-events-none"></div>
+
+      <!-- Mode Toggle Buttons Overlay -->
+      <div id="modeToggleBar" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-auto">
+        <button id="btnEnterInteractive" class="px-8 py-4 rounded-full bg-brand-500 hover:bg-brand-600 text-white font-semibold text-sm shadow-2xl shadow-brand-500/50 flex items-center gap-3 transition-all transform hover:scale-105">
+          <i class="fa-solid fa-cube text-base"></i> 進入 3D 自由互動模式
+        </button>
+      </div>
+
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 relative z-30 pointer-events-auto">
+        <div>
+          <span class="text-brand-400 text-xs font-mono font-bold tracking-widest uppercase">全方位檢視</span>
+          <h2 class="text-3xl md:text-5xl font-extrabold text-white mt-2">360° 自由探索與配色</h2>
+          <p id="interactiveHintText" class="text-gray-400 text-sm mt-2 flex items-center gap-2">
+            <i class="fa-solid fa-circle-info text-brand-400"></i>
+            點擊「進入 3D 自由互動模式」後即可進行拖曳旋轉與滾輪縮放
+          </p>
+        </div>
+        <!-- Color Selector & Exit Controls -->
+        <div class="glass-panel p-3 rounded-2xl flex items-center gap-4 pointer-events-auto">
+          <button id="btnExitInteractive" class="hidden px-4 py-2 rounded-xl bg-red-500/80 hover:bg-red-600 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-lg">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i> 退出 3D 互動
+          </button>
+          <span class="text-xs font-medium text-gray-400 pl-2">配色選購：</span>
+          <button data-color="dark" class="color-btn w-8 h-8 rounded-full bg-[#1e2025] border-2 border-brand-500 transition-all transform hover:scale-110" title="霧黑/深空灰"></button>
+          <button data-color="white" class="color-btn w-8 h-8 rounded-full bg-[#e2e8f0] border-2 border-transparent hover:border-gray-400 transition-all transform hover:scale-110" title="雪雲白"></button>
+          <button data-color="blue" class="color-btn w-8 h-8 rounded-full bg-[#2563eb] border-2 border-transparent hover:border-gray-400 transition-all transform hover:scale-110" title="極光藍"></button>
+          <button id="resetCamBtn" class="ml-2 px-3 py-1.5 glass-button rounded-xl text-xs text-gray-300 hover:text-white flex items-center gap-1.5 transition-colors" title="重置視角">
+            <i class="fa-solid fa-rotate-left"></i> 重置視角
+          </button>
+        </div>
+      </div>
+
+      <!-- Feature Card Popup on Interactive Mesh Click -->
+      <div id="partInfoCard" class="glass-panel p-6 rounded-2xl max-w-sm ml-auto opacity-0 translate-y-4 transition-all duration-300 pointer-events-auto relative z-30">
+        <h4 id="partTitle" class="text-lg font-bold text-white mb-1">提示</h4>
+        <p id="partDesc" class="text-xs text-gray-400 leading-relaxed">點擊 3D 耳機部件可查看細節說明。</p>
+      </div>
+    </section>
+
+    <!-- 05. Specifications & Purchase Zone -->
+    <section id="specs" class="py-24 px-6 md:px-12 max-w-7xl mx-auto space-y-16 pointer-events-auto">
+      <div class="text-center max-w-2xl mx-auto space-y-4">
+        <h2 class="text-3xl md:text-5xl font-extrabold text-white">規格比較與訂購</h2>
+        <p class="text-gray-400 text-sm">選擇最符合您需求的專業等級，享受無界音藝體驗。</p>
+      </div>
+
+      <!-- Pricing / Model Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        
+        <!-- Standard Edition Card -->
+        <div class="glass-panel p-8 rounded-3xl relative hover:border-brand-500/50 transition-all duration-300 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-mono text-gray-400 uppercase tracking-widest">Core Standard</div>
+            <h3 class="text-2xl font-bold text-white mt-1">APEX X1</h3>
+            <p class="text-xs text-gray-400 mt-2">適合日常高質感聆聽與商務通勤人士</p>
+            <div class="text-4xl font-extrabold text-white my-6">NT$ 9,800</div>
+            
+            <ul class="space-y-3 text-xs text-gray-300 border-t border-white/10 pt-6">
+              <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-400"></i> 45mm 鍍鈹雙核驅動單元</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-400"></i> 40dB 基礎主動降噪</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-400"></i> 35 小時連續續航時間</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-400"></i> AAC / SBC / LDAC 高音質解碼</li>
+            </ul>
+          </div>
+          <button onclick="addToCart('APEX X1 Standard', 9800)" class="w-full mt-8 py-3.5 rounded-full glass-button text-white text-xs font-semibold hover:border-brand-500">
+            加入購物車
+          </button>
+        </div>
+
+        <!-- Pro Edition Card (Highlighted) -->
+        <div class="glass-panel p-8 rounded-3xl relative border-2 border-brand-500/80 shadow-[0_0_30px_rgba(59,130,246,0.15)] flex flex-col justify-between">
+          <div class="absolute -top-3.5 right-8 bg-brand-500 text-white text-[10px] font-bold px-3 py-1 rounded-full tracking-wider uppercase">
+            旗艦首選
+          </div>
+          <div>
+            <div class="text-xs font-mono text-brand-400 uppercase tracking-widest">Master Edition</div>
+            <h3 class="text-2xl font-bold text-brand-400 mt-1">APEX X1 PRO</h3>
+            <p class="text-xs text-brand-400 mt-2">為發燒友與頂級音樂製作人打造的旗艦設備</p>
+            <div class="text-4xl font-extrabold text-brand-400 my-6">NT$ 12,800</div>
+            
+            <ul class="space-y-3 text-xs text-brand-400 border-t border-white/10 pt-6">
+              <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-400"></i> 45mm 航太鍍鈹單元 + 靜電高音單元</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-400"></i> 45dB 自適應 Anc 3.0 智慧降噪</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-400"></i> 48 小時續航 + 支援快充 (10分鐘播放5小時)</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-400"></i> Hi-Res Wireless / AptX Lossless</li>
+              <li class="flex items-center gap-3"><i class="fa-solid fa-check text-brand-400"></i> 附贈專屬碳纖維硬殼收納盒</li>
+            </ul>
+          </div>
+          <button onclick="addToCart('APEX X1 PRO Master', 12800)" class="w-full mt-8 py-3.5 rounded-full bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold shadow-lg shadow-brand-500/30 transition-all">
+            立即預訂旗艦版
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Detailed Specs Table -->
+      <div class="glass-panel p-8 rounded-3xl max-w-4xl mx-auto">
+        <h4 class="text-lg font-bold text-white mb-6">詳細技術規格對比</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-gray-300">
+            <thead>
+              <tr class="border-b border-white/10 text-gray-400 uppercase tracking-wider">
+                <th class="py-3 px-4">規格特徵</th>
+                <th class="py-3 px-4">APEX X1</th>
+                <th class="py-3 px-4 text-brand-400 font-bold">APEX X1 PRO</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              <tr>
+                <td class="py-3.5 px-4 font-semibold text-white">單體單元</td>
+                <td class="py-3.5 px-4">45mm 鍍鈹動圈單元</td>
+                <td class="py-3.5 px-4 text-brand-400">45mm 鍍鈹動圈 + 雙靜電驅動模組</td>
+              </tr>
+              <tr>
+                <td class="py-3.5 px-4 font-semibold text-white">頻率響應</td>
+                <td class="py-3.5 px-4">15Hz - 28,000Hz</td>
+                <td class="py-3.5 px-4 text-brand-400">5Hz - 40,000Hz (Hi-Res Gold)</td>
+              </tr>
+              <tr>
+                <td class="py-3.5 px-4 font-semibold text-white">藍牙版本</td>
+                <td class="py-3.5 px-4">Bluetooth 5.2</td>
+                <td class="py-3.5 px-4 text-brand-400">Bluetooth 5.3 (多點自動切換)</td>
+              </tr>
+              <tr>
+                <td class="py-3.5 px-4 font-semibold text-white">機身重量</td>
+                <td class="py-3.5 px-4">265 克</td>
+                <td class="py-3.5 px-4 text-brand-400">272 克</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06. Footer -->
+    <footer class="border-t border-white/10 py-16 px-6 md:px-12 glass-panel mt-20 pointer-events-auto">
+      <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10">
+        <div class="space-y-4">
+          <a href="#" class="font-bold text-xl tracking-wider text-white">
+            APEX<span class="text-brand-400 font-light">AUDIO</span>
+          </a>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            重塑聲音的邊界。我們致力於運用現代材料科學與前端聲學工程，提供無與倫比的感官體驗。
+          </p>
+        </div>
+        <div>
+          <h5 class="text-sm font-bold text-white mb-4">產品導覽</h5>
+          <ul class="space-y-2 text-xs text-gray-400">
+            <li><a href="#hero" class="hover:text-white transition-colors">Apex X1 總覽</a></li>
+            <li><a href="#explode" class="hover:text-white transition-colors">3D 拆解結構</a></li>
+            <li><a href="#explore" class="hover:text-white transition-colors">顏色客製化</a></li>
+            <li><a href="#specs" class="hover:text-white transition-colors">旗艦規格比較</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5 class="text-sm font-bold text-white mb-4">服務與支援</h5>
+          <ul class="space-y-2 text-xs text-gray-400">
+            <li><a href="#" class="hover:text-white transition-colors">韌體升級說明</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">保固服務登錄</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">常見問題解答</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">聯絡工程團隊</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5 class="text-sm font-bold text-white mb-4">關注 APEX</h5>
+          <div class="flex gap-4 text-gray-400">
+            <a href="#" class="hover:text-brand-400 transition-colors text-lg"><i class="fa-brands fa-instagram"></i></a>
+            <a href="#" class="hover:text-brand-400 transition-colors text-lg"><i class="fa-brands fa-x-twitter"></i></a>
+            <a href="#" class="hover:text-brand-400 transition-colors text-lg"><i class="fa-brands fa-youtube"></i></a>
+            <a href="#" class="hover:text-brand-400 transition-colors text-lg"><i class="fa-brands fa-facebook"></i></a>
+          </div>
+        </div>
+      </div>
+      <div class="max-w-7xl mx-auto mt-12 pt-6 border-t border-white/5 text-center text-[11px] text-gray-500">
+        © 2026 APEX AUDIO Inc. 版權所有。本展示網站係基於 Three.js 現代 WebGL 互動技術構建。
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- Simulated Shopping Cart & Checkout Modal Window -->
+  <div id="cartModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="glass-panel p-8 rounded-3xl max-w-md w-full relative space-y-6">
+      <button onclick="closeCartModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center">
+          <i class="fa-solid fa-shopping-bag"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">模擬購物車資訊</h3>
+          <p class="text-xs text-gray-400">本區僅作展示互動回饋演示</p>
+        </div>
+      </div>
+      
+      <div id="cartItemDetail" class="border-y border-white/10 py-4 text-xs space-y-2">
+        <!-- Dynamic Fill -->
+      </div>
+
+      <div class="space-y-3">
+        <button onclick="triggerCheckoutDemo()" class="w-full py-3.5 rounded-full bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs transition-all shadow-lg shadow-brand-500/30">
+          模擬進行結帳流程
+        </button>
+        <button onclick="closeCartModal()" class="w-full py-2 text-xs text-gray-400 hover:text-white transition-colors">
+          繼續瀏覽網站
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript 3D Scene Initialization & Robust Interaction Engine Script -->
+  <script>
+    // --- Global State & Setup ---
+    let scene, camera, renderer, controls;
+    let headphoneGroup, explodedParts = [];
+    let isExploded = false;
+    let isUserDragging = false;
+    let isInteractiveZone = false;
+    let savedStateBeforeInteractive = null;
+    
+    // Materials Dictionary (PBR Setup)
+    let materials = {
+      body: new THREE.MeshStandardMaterial({
+        color: 0x1e2025,
+        roughness: 0.35,
+        metalness: 0.8,
+        envMapIntensity: 1.2
+      }),
+      cushion: new THREE.MeshStandardMaterial({
+        color: 0x121316,
+        roughness: 0.9,
+        metalness: 0.1
+      }),
+      accent: new THREE.MeshStandardMaterial({
+        color: 0x3b82f6,
+        roughness: 0.2,
+        metalness: 0.9,
+        emissive: 0x1d4ed8,
+        emissiveIntensity: 0.2
+      }),
+      driverMesh: new THREE.MeshStandardMaterial({
+        color: 0xd1d5db,
+        roughness: 0.1,
+        metalness: 0.95
+      }),
+      innerFilter: new THREE.MeshStandardMaterial({
+        color: 0x2563eb,
+        roughness: 0.5,
+        metalness: 0.2,
+        wireframe: true
+      })
+    };
+
+    // Color Theme Presets
+    const colorThemes = {
+      dark: { body: 0x1e2025, cushion: 0x121316, accent: 0x3b82f6 },
+      white: { body: 0xe2e8f0, cushion: 0xd1d5db, accent: 0x60a5fa },
+      blue: { body: 0x1e3a8a, cushion: 0x0f172a, accent: 0x93c5fd }
+    };
+
+    // --- Init Function ---
+    function init3DScene() {
+      const container = document.getElementById('webgl-container');
+      const touchOverlay = document.getElementById('3d-interaction-overlay');
+
+      // 1. Scene
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x0d0e11, 0.035);
+
+      // 2. Camera
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 0, 7.5);
+
+      // 3. Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.25;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      // 4. OrbitControls - Directly attached to the touchOverlay DOM Element for precise event capturing
+      controls = new THREE.OrbitControls(camera, touchOverlay);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.enableZoom = true;
+      controls.zoomSpeed = 0.8;
+      controls.rotateSpeed = 0.8;
+      controls.minDistance = 3.5;
+      controls.maxDistance = 12;
+      controls.maxPolarAngle = Math.PI / 1.5;
+      controls.minPolarAngle = Math.PI / 4;
+      controls.enabled = false; // Disabled by default to avoid hijacking scroll wheel
+
+      // Event Listeners for State Management
+      controls.addEventListener('start', () => { 
+        isUserDragging = true; 
+        gsap.killTweensOf(camera.position);
+        gsap.killTweensOf(headphoneGroup.rotation);
+      });
+      controls.addEventListener('end', () => { 
+        isUserDragging = false; 
+      });
+
+      // 5. Lighting Setup
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+      scene.add(ambientLight);
+
+      const mainLight = new THREE.DirectionalLight(0xffffff, 2.5);
+      mainLight.position.set(5, 8, 5);
+      mainLight.castShadow = true;
+      scene.add(mainLight);
+
+      const blueFillLight = new THREE.DirectionalLight(0x3b82f6, 2.0);
+      blueFillLight.position.set(-6, -2, -4);
+      scene.add(blueFillLight);
+
+      const rimLight = new THREE.PointLight(0xffffff, 1.5, 10);
+      rimLight.position.set(0, 4, -4);
+      scene.add(rimLight);
+
+      // 6. Build Headphone Model
+      buildHeadphoneModel();
+
+      // 7. Hide Loader Overlay & Trigger Hero Entrance Animations
+      setTimeout(() => {
+        const loader = document.getElementById('loader');
+        if (loader) {
+          loader.classList.add('opacity-0');
+          setTimeout(() => {
+            loader.style.display = 'none';
+            triggerHeroAnimations();
+          }, 700);
+        }
+      }, 400);
+
+      // 8. Event Listeners
+      window.addEventListener('resize', onWindowResize);
+      setupRaycaster(touchOverlay);
+    }
+
+    // --- Hero Section Text & Model Entrance Animations ---
+    function triggerHeroAnimations() {
+      const tl = gsap.timeline();
+
+      // Masked Title & Subtext Revealed in Rhythm
+      tl.to("#heroBadge", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" })
+        .to("#heroTitleLine1", { opacity: 1, y: 0, duration: 0.9, ease: "power3.out" }, "-=0.3")
+        .to("#heroSubtext", { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }, "-=0.5")
+        .to("#heroActions", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "-=0.4")
+        .to("#heroStats", { opacity: 1, duration: 0.8 }, "-=0.3");
+
+      // 3D Model Entrance Synchronized Entrance
+      gsap.from(headphoneGroup.rotation, {
+        y: -Math.PI * 1.5,
+        x: 0.3,
+        duration: 1.8,
+        ease: "power3.out"
+      });
+      gsap.from(headphoneGroup.position, {
+        y: -1,
+        duration: 1.8,
+        ease: "power3.out"
+      });
+    }
+
+    // --- Procedural High-Detail Headphone Mesh Construction ---
+    function buildHeadphoneModel() {
+      headphoneGroup = new THREE.Group();
+      explodedParts = [];
+
+      // Headband Arc
+      const headbandGeo = new THREE.TorusGeometry(1.6, 0.09, 16, 64, Math.PI);
+      const headband = new THREE.Mesh(headbandGeo, materials.body);
+      headband.rotation.x = Math.PI / 2;
+      headband.position.y = 0.6;
+      headphoneGroup.add(headband);
+
+      // Side Arms
+      const armGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.8, 16);
+      
+      const leftArm = new THREE.Mesh(armGeo, materials.accent);
+      leftArm.position.set(-1.6, 0.2, 0);
+      headphoneGroup.add(leftArm);
+
+      const rightArm = new THREE.Mesh(armGeo, materials.accent);
+      rightArm.position.set(1.6, 0.2, 0);
+      headphoneGroup.add(rightArm);
+
+      // Earcup Assembly Constructor
+      function createEarCup(isLeft) {
+        const cupGroup = new THREE.Group();
+        const sideMult = isLeft ? -1 : 1;
+        cupGroup.position.x = 1.6 * sideMult;
+        cupGroup.position.y = -0.3;
+
+        // Part A: Outer Metallic Shell
+        const outerShellGeo = new THREE.CylinderGeometry(0.75, 0.7, 0.35, 32);
+        const outerShell = new THREE.Mesh(outerShellGeo, materials.body);
+        outerShell.rotation.z = Math.PI / 2 * sideMult;
+        outerShell.name = isLeft ? "左耳罩鈦合金外殼" : "右耳罩鈦合金外殼";
+        outerShell.userData = { desc: "鍛造金屬外殼，內建主動降噪麥克風陣列與風噪抑制腔體。" };
+        cupGroup.add(outerShell);
+
+        // Part B: Driver Unit Membrane
+        const driverGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.08, 32);
+        const driver = new THREE.Mesh(driverGeo, materials.driverMesh);
+        driver.rotation.z = Math.PI / 2 * sideMult;
+        driver.position.x = -0.15 * sideMult;
+        driver.name = "45mm 鍍鈹聲學驅動單元";
+        driver.userData = { desc: "鈹金屬塗層振膜，極致輕量化與高剛性，重現無損聲學細節。" };
+        cupGroup.add(driver);
+
+        // Part C: Acoustic Inner Filter
+        const filterGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.02, 24);
+        const filter = new THREE.Mesh(filterGeo, materials.innerFilter);
+        filter.rotation.z = Math.PI / 2 * sideMult;
+        filter.position.x = -0.22 * sideMult;
+        filter.name = "專利聲學調音網罩";
+        filter.userData = { desc: "微米級精密氣流導孔，精確調節耳罩內聲波反射。" };
+        cupGroup.add(filter);
+
+        // Part D: Cushion Pad
+        const cushionGeo = new THREE.TorusGeometry(0.55, 0.22, 16, 32);
+        const cushion = new THREE.Mesh(cushionGeo, materials.cushion);
+        cushion.rotation.y = Math.PI / 2;
+        cushion.position.x = -0.3 * sideMult;
+        cushion.name = "蛋白皮革記憶棉耳墊";
+        cushion.userData = { desc: "慢回彈記憶棉結合高透氣蛋白皮革，提供雲朵般的無壓佩戴。" };
+        cupGroup.add(cushion);
+
+        // Store Target Positions for Explode Animation
+        explodedParts.push(
+          { mesh: outerShell, targetX: 0.6 * sideMult },
+          { mesh: driver, targetX: 0.2 * sideMult },
+          { mesh: filter, targetX: -0.2 * sideMult },
+          { mesh: cushion, targetX: -0.7 * sideMult }
+        );
+
+        return cupGroup;
+      }
+
+      headphoneGroup.add(createEarCup(true));
+      headphoneGroup.add(createEarCup(false));
+
+      headphoneGroup.position.set(0, 0, 0);
+      scene.add(headphoneGroup);
+    }
+
+    // --- Render Loop ---
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Subtle breathing float only when user is NOT actively dragging
+      if (!isExploded && !isUserDragging) {
+        headphoneGroup.position.y = Math.sin(Date.now() * 0.0015) * 0.04;
+      }
+
+      if (isExploded) {
+        updateAnnotationPins();
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // --- Window Resize ---
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // --- GSAP Scroll-Driven Camera Logic (Stable position locking) ---
+    function setupScrollAnimations() {
+      gsap.registerPlugin(ScrollTrigger);
+
+      // Feature Camera Angles Definition
+      const featurePositions = {
+        driver: { cam: { x: 2.8, y: 0, z: 3.8 }, rot: { x: 0, y: Math.PI / 2, z: 0.25 } },
+        anc: { cam: { x: -2.8, y: 0.4, z: 4.2 }, rot: { x: -0.15, y: -Math.PI / 2, z: 0 } },
+        comfort: { cam: { x: 0, y: 2.2, z: 4.8 }, rot: { x: 0.7, y: 0, z: 0 } }
+      };
+
+      document.querySelectorAll('.feature-card').forEach((card) => {
+        const mode = card.dataset.camPos;
+        const target = featurePositions[mode];
+
+        if (!target) return;
+
+        ScrollTrigger.create({
+          trigger: card,
+          start: "top center",
+          end: "bottom center",
+          onEnter: () => applyCameraTransition(target),
+          onEnterBack: () => applyCameraTransition(target)
+        });
+      });
+    }
+
+    function applyCameraTransition(target) {
+      if (isExploded || isUserDragging) return;
+
+      gsap.to(camera.position, {
+        x: target.cam.x,
+        y: target.cam.y,
+        z: target.cam.z,
+        duration: 1.2,
+        ease: "power2.out",
+        overwrite: "auto"
+      });
+
+      gsap.to(headphoneGroup.rotation, {
+        x: target.rot.x,
+        y: target.rot.y,
+        z: target.rot.z,
+        duration: 1.2,
+        ease: "power2.out",
+        overwrite: "auto"
+      });
+    }
+
+    // --- Explode & Assemble Mechanics ---
+    function triggerExplode(explode) {
+      isExploded = explode;
+      const btnExp = document.getElementById('btnExplode');
+      const btnAss = document.getElementById('btnAssemble');
+      const pinContainer = document.getElementById('hotspotContainer');
+
+      if (explode) {
+        btnExp.classList.add('bg-brand-500', 'text-white');
+        btnExp.classList.remove('text-gray-300');
+        btnAss.classList.remove('bg-brand-500', 'text-white');
+        btnAss.classList.add('text-gray-300');
+
+        gsap.to(camera.position, { x: 0, y: 0, z: 6.5, duration: 1, overwrite: "auto" });
+        gsap.to(headphoneGroup.rotation, { x: 0, y: Math.PI / 6, z: 0, duration: 1, overwrite: "auto" });
+
+        explodedParts.forEach(item => {
+          gsap.to(item.mesh.position, {
+            x: item.targetX,
+            duration: 1.2,
+            ease: "power3.out"
+          });
+        });
+
+        pinContainer.classList.remove('opacity-0');
+      } else {
+        btnAss.classList.add('bg-brand-500', 'text-white');
+        btnAss.classList.remove('text-gray-300');
+        btnExp.classList.remove('bg-brand-500', 'text-white');
+        btnExp.classList.add('text-gray-300');
+
+        explodedParts.forEach(item => {
+          gsap.to(item.mesh.position, {
+            x: 0,
+            duration: 1,
+            ease: "power3.inOut"
+          });
+        });
+
+        pinContainer.classList.add('opacity-0');
+      }
+    }
+
+    // --- HUD Annotation Pin Mapping ---
+    function updateAnnotationPins() {
+      if (explodedParts.length === 0) return;
+      
+      const pin1 = document.getElementById('pin1');
+      const pin2 = document.getElementById('pin2');
+      const explodeSection = document.getElementById('explode');
+
+      if (!pin1 || !pin2 || !explodeSection) return;
+
+      const sectionRect = explodeSection.getBoundingClientRect();
+      const isMobile = window.innerWidth < 640;
+
+      // Pin 1 Projection (Driver Unit - Left Side)
+      const pos1 = new THREE.Vector3();
+      explodedParts[2].mesh.getWorldPosition(pos1);
+      pos1.project(camera);
+
+      // Convert Screen Viewport coordinates into Section Local coordinates
+      let localX1 = (pos1.x * 0.5 + 0.5) * window.innerWidth - sectionRect.left;
+      let localY1 = (-(pos1.y * 0.5) + 0.5) * window.innerHeight - sectionRect.top;
+
+      // Pin 2 Projection (Mainboard - Right Side)
+      const pos2 = new THREE.Vector3();
+      explodedParts[0].mesh.getWorldPosition(pos2);
+      pos2.project(camera);
+
+      let localX2 = (pos2.x * 0.5 + 0.5) * window.innerWidth - sectionRect.left;
+      let localY2 = (-(pos2.y * 0.5) + 0.5) * window.innerHeight - sectionRect.top;
+
+      if (isMobile) {
+        // Mobile Layout: Clamp Pin 1 to Top-Left, Pin 2 to Bottom-Right inside the section
+        localX1 = Math.min(Math.max(80, localX1), sectionRect.width * 0.45);
+        localY1 = Math.min(Math.max(100, localY1 - 40), sectionRect.height * 0.35);
+
+        localX2 = Math.min(Math.max(sectionRect.width * 0.55, localX2), sectionRect.width - 80);
+        localY2 = Math.min(Math.max(sectionRect.height * 0.65, localY2 + 40), sectionRect.height - 80);
+      } else {
+        // Desktop Layout: Ensure Pin 1 stays strictly on Left Half (5% to 42%), Pin 2 stays strictly on Right Half (58% to 95%)
+        localX1 = Math.min(Math.max(sectionRect.width * 0.05 + 80, localX1 - 60), sectionRect.width * 0.42 - 80);
+        localY1 = Math.min(Math.max(120, localY1), sectionRect.height - 120);
+
+        localX2 = Math.min(Math.max(sectionRect.width * 0.58 + 80, localX2 + 60), sectionRect.width * 0.95 - 80);
+        localY2 = Math.min(Math.max(120, localY2), sectionRect.height - 120);
+      }
+
+      pin1.style.left = `${localX1}px`;
+      pin1.style.top = `${localY1}px`;
+
+      pin2.style.left = `${localX2}px`;
+      pin2.style.top = `${localY2}px`;
+    }
+
+    // --- Raycaster Setup ---
+    function setupRaycaster(targetElement) {
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+
+      targetElement.addEventListener('click', (e) => {
+        if (isUserDragging) return;
+
+        const rect = targetElement.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(headphoneGroup.children, true);
+
+        if (intersects.length > 0) {
+          const clickedMesh = intersects[0].object;
+          if (clickedMesh.userData && clickedMesh.userData.desc) {
+            showPartCard(clickedMesh.name, clickedMesh.userData.desc);
+            
+            if (clickedMesh.material && clickedMesh.material.emissive) {
+              const originalEmissive = clickedMesh.material.emissive.getHex();
+              clickedMesh.material.emissive.setHex(0x3b82f6);
+              setTimeout(() => clickedMesh.material.emissive.setHex(originalEmissive), 600);
+            }
+          }
+        }
+      });
+    }
+
+    function showPartCard(title, desc) {
+      const card = document.getElementById('partInfoCard');
+      document.getElementById('partTitle').innerText = title;
+      document.getElementById('partDesc').innerText = desc;
+      
+      card.classList.remove('opacity-0', 'translate-y-4');
+      card.classList.add('opacity-100', 'translate-y-0');
+
+      setTimeout(() => {
+        card.classList.remove('opacity-100', 'translate-y-0');
+        card.classList.add('opacity-0', 'translate-y-4');
+      }, 5000);
+    }
+
+    // --- Color Customization Logic ---
+    function changeHeadphoneColor(colorKey) {
+      const theme = colorThemes[colorKey];
+      if (!theme) return;
+
+      gsap.to(materials.body.color, {
+        r: ((theme.body >> 16) & 255) / 255,
+        g: ((theme.body >> 8) & 255) / 255,
+        b: (theme.body & 255) / 255,
+        duration: 0.8
+      });
+
+      gsap.to(materials.cushion.color, {
+        r: ((theme.cushion >> 16) & 255) / 255,
+        g: ((theme.cushion >> 8) & 255) / 255,
+        b: (theme.cushion & 255) / 255,
+        duration: 0.8
+      });
+
+      gsap.to(materials.accent.color, {
+        r: ((theme.accent >> 16) & 255) / 255,
+        g: ((theme.accent >> 8) & 255) / 255,
+        b: (theme.accent & 255) / 255,
+        duration: 0.8
+      });
+    }
+
+    // --- Shopping Cart System ---
+    let currentCartItem = null;
+
+    function addToCart(modelName, price) {
+      currentCartItem = { name: modelName, price: price };
+      document.getElementById('cartBadge').classList.remove('hidden');
+
+      const cartDetail = document.getElementById('cartItemDetail');
+      cartDetail.innerHTML = `
+        <div class="flex justify-between items-center text-white">
+          <span class="font-bold">${modelName}</span>
+          <span class="text-brand-400 font-semibold">NT$ ${price.toLocaleString()}</span>
+        </div>
+        <p class="text-[11px] text-gray-400">已套用尊榮免費專人運送與 2 年延長保固權益</p>
+      `;
+
+      openCartModal();
+    }
+
+    function openCartModal() {
+      const modal = document.getElementById('cartModal');
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      modal.classList.add('opacity-100');
+    }
+
+    function closeCartModal() {
+      const modal = document.getElementById('cartModal');
+      modal.classList.remove('opacity-100');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    function triggerCheckoutDemo() {
+      alert("【模擬結帳通知】此為展示網站。您的預訂要求（" + (currentCartItem ? currentCartItem.name : "Apex X1") + "）已通過模擬訂單系統登記！");
+      closeCartModal();
+    }
+
+    // --- Onload Initialization ---
+    window.onload = function() {
+      init3DScene();
+      animate();
+      setupScrollAnimations();
+
+      // Interactive Mode Toggle Handlers
+      const overlay = document.getElementById('3d-interaction-overlay');
+      const btnEnter = document.getElementById('btnEnterInteractive');
+      const btnExit = document.getElementById('btnExitInteractive');
+      const modeToggleBar = document.getElementById('modeToggleBar');
+      const hintText = document.getElementById('interactiveHintText');
+
+      function setInteractiveMode(active) {
+        if (active) {
+          // 1. 記錄進入互動模式當下的模型與相機狀態快照
+          savedStateBeforeInteractive = {
+            camPos: camera.position.clone(),
+            groupPos: headphoneGroup.position.clone(),
+            groupRot: headphoneGroup.rotation.clone(),
+            groupScale: headphoneGroup.scale.clone(),
+            target: controls.target.clone()
+          };
+
+          controls.enabled = true;
+          overlay.classList.remove('pointer-events-none');
+          overlay.classList.add('pointer-events-auto');
+          modeToggleBar.classList.add('hidden');
+          btnExit.classList.remove('hidden');
+          hintText.innerHTML = `<i class="fa-solid fa-hand-pointer text-brand-400 animate-bounce"></i> 滑鼠左鍵/單指拖曳旋轉 ｜ 滾輪/雙指捏合縮放`;
+        } else {
+          controls.enabled = false;
+          overlay.classList.remove('pointer-events-auto');
+          overlay.classList.add('pointer-events-none');
+          modeToggleBar.classList.remove('hidden');
+          btnExit.classList.add('hidden');
+          hintText.innerHTML = `<i class="fa-solid fa-circle-info text-brand-400"></i> 點擊「進入 3D 自由互動模式」後即可進行拖曳旋轉與滾輪縮放`;
+
+          // 2. 退出時放棄互動期間的變更，還原至進入時記錄的快照狀態
+          if (savedStateBeforeInteractive) {
+            gsap.to(camera.position, {
+              x: savedStateBeforeInteractive.camPos.x,
+              y: savedStateBeforeInteractive.camPos.y,
+              z: savedStateBeforeInteractive.camPos.z,
+              duration: 0.6,
+              ease: "power2.out",
+              overwrite: "auto"
+            });
+
+            gsap.to(headphoneGroup.rotation, {
+              x: savedStateBeforeInteractive.groupRot.x,
+              y: savedStateBeforeInteractive.groupRot.y,
+              z: savedStateBeforeInteractive.groupRot.z,
+              duration: 0.6,
+              ease: "power2.out",
+              overwrite: "auto"
+            });
+
+            gsap.to(headphoneGroup.position, {
+              x: savedStateBeforeInteractive.groupPos.x,
+              y: savedStateBeforeInteractive.groupPos.y,
+              z: savedStateBeforeInteractive.groupPos.z,
+              duration: 0.6,
+              ease: "power2.out",
+              overwrite: "auto"
+            });
+
+            gsap.to(headphoneGroup.scale, {
+              x: savedStateBeforeInteractive.groupScale.x,
+              y: savedStateBeforeInteractive.groupScale.y,
+              z: savedStateBeforeInteractive.groupScale.z,
+              duration: 0.6,
+              ease: "power2.out",
+              overwrite: "auto"
+            });
+
+            controls.target.copy(savedStateBeforeInteractive.target);
+            controls.update();
+          }
+        }
+      }
+
+      btnEnter.addEventListener('click', () => setInteractiveMode(true));
+      btnExit.addEventListener('click', () => setInteractiveMode(false));
+
+      // UI Button Handlers
+      document.getElementById('btnExplode').addEventListener('click', () => triggerExplode(true));
+      document.getElementById('btnAssemble').addEventListener('click', () => triggerExplode(false));
+
+      document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.color-btn').forEach(b => b.classList.replace('border-brand-500', 'border-transparent'));
+          e.target.classList.replace('border-transparent', 'border-brand-500');
+          changeHeadphoneColor(e.target.dataset.color);
+        });
+      });
+
+      document.getElementById('resetCamBtn').addEventListener('click', () => {
+        gsap.to(camera.position, { x: 0, y: 0, z: 7.5, duration: 1 });
+        gsap.to(headphoneGroup.rotation, { x: 0, y: 0, z: 0, duration: 1 });
+        controls.reset();
+      });
+
+      document.getElementById('cartBtn').addEventListener('click', () => {
+        if (currentCartItem) {
+          openCartModal();
+        } else {
+          addToCart('APEX X1 Standard', 9800);
+        }
+      });
+    };
+  </script>
+</body>
+</html>
